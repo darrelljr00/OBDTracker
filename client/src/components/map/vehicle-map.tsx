@@ -16,6 +16,8 @@ export function VehicleMap({ vehicle, location, activeTrip, isLive }: VehicleMap
   const mapRef = useRef<L.Map | null>(null);
   const vehicleMarkerRef = useRef<L.Marker | null>(null);
   const routeLineRef = useRef<L.Polyline | null>(null);
+  const startMarkerRef = useRef<L.Marker | null>(null);
+  const endMarkerRef = useRef<L.Marker | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -84,33 +86,35 @@ export function VehicleMap({ vehicle, location, activeTrip, isLive }: VehicleMap
   }, [location, vehicle, isLive]);
 
   useEffect(() => {
-    if (!mapRef.current || !activeTrip) return;
+    if (!mapRef.current) return;
 
     const map = mapRef.current;
 
-    // Sample route coordinates for demonstration
-    const routeCoordinates: [number, number][] = [
-      [40.7485, -73.9883], // NYC
-      [40.7580, -73.9855],
-      [40.7680, -73.9800],
-      [40.7850, -73.9750],
-      [40.8100, -73.9600],
-      [40.8500, -73.9400],
-      [40.9000, -73.9000],
-      [41.0000, -73.8500],
-      [41.1500, -73.7500],
-      [41.3000, -73.6000],
-      [41.5000, -73.4000],
-      [41.7000, -73.1000],
-      [41.9000, -72.8000],
-      [42.1000, -72.5000],
-      [42.3000, -72.2000],
-      [42.3601, -71.0589], // Boston
-    ];
-
+    // Always clean up existing route line and markers first
     if (routeLineRef.current) {
       map.removeLayer(routeLineRef.current);
+      routeLineRef.current = null;
     }
+    if (startMarkerRef.current) {
+      map.removeLayer(startMarkerRef.current);
+      startMarkerRef.current = null;
+    }
+    if (endMarkerRef.current) {
+      map.removeLayer(endMarkerRef.current);
+      endMarkerRef.current = null;
+    }
+
+    // If no active trip, we're done (map is cleaned)
+    if (!activeTrip) return;
+
+    // Get route coordinates from trip data
+    const tripRoute = activeTrip.route as Array<{lat: number, lng: number, timestamp: string}> | null;
+    
+    if (!tripRoute || tripRoute.length === 0) {
+      return; // No route data yet
+    }
+
+    const routeCoordinates: [number, number][] = tripRoute.map(point => [point.lat, point.lng]);
 
     // Draw route line
     const routeLine = L.polyline(routeCoordinates, {
@@ -121,22 +125,32 @@ export function VehicleMap({ vehicle, location, activeTrip, isLive }: VehicleMap
 
     routeLineRef.current = routeLine;
 
-    // Add start and end markers
-    const routeIcon = L.divIcon({
-      className: 'bg-transparent',
-      html: `<div class="w-3 h-3 bg-primary border border-white rounded-full shadow-lg"></div>`,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6],
-    });
+    // Add start and end markers if we have enough points
+    if (routeCoordinates.length > 0) {
+      const routeIcon = L.divIcon({
+        className: 'bg-transparent',
+        html: `<div class="w-3 h-3 bg-primary border border-white rounded-full shadow-lg"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+      });
 
-    L.marker(routeCoordinates[0], { icon: routeIcon }).addTo(map)
-      .bindPopup('<div class="text-sm"><strong>Start</strong><br>New York, NY</div>');
+      // Add start marker if coordinates exist
+      if (activeTrip.startCoords) {
+        const startCoords = activeTrip.startCoords as {lat: number, lng: number};
+        startMarkerRef.current = L.marker([startCoords.lat, startCoords.lng], { icon: routeIcon }).addTo(map)
+          .bindPopup(`<div class="text-sm"><strong>Start</strong><br>${activeTrip.startLocation}</div>`);
+      }
 
-    L.marker(routeCoordinates[routeCoordinates.length - 1], { icon: routeIcon }).addTo(map)
-      .bindPopup('<div class="text-sm"><strong>Destination</strong><br>Boston, MA</div>');
+      // Add end marker if coordinates exist
+      if (activeTrip.endCoords) {
+        const endCoords = activeTrip.endCoords as {lat: number, lng: number};
+        endMarkerRef.current = L.marker([endCoords.lat, endCoords.lng], { icon: routeIcon }).addTo(map)
+          .bindPopup(`<div class="text-sm"><strong>Current</strong><br>${activeTrip.endLocation || 'In Progress'}</div>`);
+      }
 
-    // Fit map to show route
-    map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+      // Fit map to show route
+      map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+    }
 
   }, [activeTrip]);
 

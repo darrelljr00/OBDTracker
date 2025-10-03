@@ -11,6 +11,19 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Haversine formula to calculate distance between two GPS coordinates (in miles)
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const storage = await storagePromise;
   const httpServer = createServer(app);
@@ -133,6 +146,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const locationData = insertVehicleLocationSchema.parse(req.body);
       const location = await storage.createVehicleLocation(locationData);
+      
+      // If there's an active trip, append this location to the route
+      const activeTrip = await storage.getActiveTrip(location.vehicleId);
+      if (activeTrip) {
+        const currentRoute = (activeTrip.route as Array<{lat: number, lng: number, timestamp: string}>) || [];
+        const newRoutePoint = {
+          lat: location.latitude,
+          lng: location.longitude,
+          timestamp: location.timestamp!.toISOString(),
+        };
+        
+        // Calculate distance from previous point if available
+        let additionalDistance = 0;
+        if (currentRoute.length > 0) {
+          const lastPoint = currentRoute[currentRoute.length - 1];
+          additionalDistance = calculateDistance(
+            lastPoint.lat,
+            lastPoint.lng,
+            location.latitude,
+            location.longitude
+          );
+        }
+        
+        // Update trip with new route point and statistics
+        await storage.updateTrip(activeTrip.id, {
+          route: [...currentRoute, newRoutePoint] as any,
+          distance: (activeTrip.distance || 0) + additionalDistance,
+          maxSpeed: Math.max(activeTrip.maxSpeed || 0, location.speed || 0),
+          endCoords: { lat: location.latitude, lng: location.longitude } as any,
+        });
+      }
       
       // Broadcast location update via WebSocket
       const locationUpdate: LocationUpdate = {
