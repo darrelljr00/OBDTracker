@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { storage } from "./storage";
+import { storagePromise } from "./storage";
 import { 
   insertVehicleLocationSchema, 
   insertObdDataSchema,
@@ -12,6 +12,7 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const storage = await storagePromise;
   const httpServer = createServer(app);
 
   // WebSocket server for real-time communication

@@ -301,4 +301,78 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DbStorage } from './db-storage';
+
+async function seedDatabase(dbStorage: DbStorage) {
+  const existingVehicles = await dbStorage.getVehicles();
+  if (existingVehicles.length > 0) {
+    return;
+  }
+
+  const driver = await dbStorage.createDriver({
+    name: "Sarah Johnson",
+    licenseNumber: "DL123456789",
+  });
+
+  const vehicle = await dbStorage.createVehicle({
+    name: "Tesla Model S",
+    plate: "ABC-1234",
+    vin: "5YJ3E1EA7KF123456",
+    make: "Tesla",
+    model: "Model S",
+    year: 2023,
+    driverId: driver.id,
+    isActive: 1,
+  });
+
+  const trip = await dbStorage.createTrip({
+    vehicleId: vehicle.id,
+    driverId: driver.id,
+    startLocation: "1250 Broadway, New York, NY 10001",
+    endLocation: null,
+    startCoords: { lat: 40.7485, lng: -73.9883 },
+    endCoords: null,
+    distance: 142.3,
+    duration: 10020,
+    avgSpeed: 51,
+    maxSpeed: 75,
+    route: [],
+    status: "active",
+  });
+
+  // Create initial location for the trip
+  await dbStorage.createVehicleLocation({
+    vehicleId: vehicle.id,
+    tripId: trip.id,
+    latitude: 40.7485,
+    longitude: -73.9883,
+    speed: 68,
+    heading: 45,
+    altitude: 50,
+    accuracy: 5,
+  });
+
+  await dbStorage.createObdData({
+    vehicleId: vehicle.id,
+    tripId: trip.id,
+    rpm: 2450,
+    speed: 68,
+    coolantTemp: 195,
+    batteryVoltage: 14.2,
+    throttlePosition: 32,
+    fuelLevel: 67,
+    engineLoad: 45,
+  });
+
+  console.log('Database seeded with initial data');
+}
+
+async function initializeStorage(): Promise<IStorage> {
+  const dbStorage = new DbStorage();
+  await seedDatabase(dbStorage);
+  console.log('Database storage initialized');
+  return dbStorage;
+}
+
+export const storagePromise = initializeStorage();
+export let storage: IStorage;
