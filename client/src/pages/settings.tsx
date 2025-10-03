@@ -193,6 +193,105 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
+              {/* Raspberry Pi Integration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Raspberry Pi Integration</CardTitle>
+                  <CardDescription>
+                    Use a Raspberry Pi to connect OBD devices and send data to the system
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Setup Overview</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Connect a Raspberry Pi to your vehicle's OBD port to read diagnostics and GPS data, 
+                      then transmit it to your fleet tracking system via WiFi or cellular connection.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Hardware Requirements</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li>Raspberry Pi (3/4/Zero W recommended)</li>
+                      <li>ELM327 OBD-II adapter (USB or Bluetooth)</li>
+                      <li>GPS module (optional, if not using OBD GPS)</li>
+                      <li>Power supply (12V to 5V converter for vehicle power)</li>
+                      <li>MicroSD card (8GB+)</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Python Example Code</h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Install required packages: <code className="px-1 py-0.5 bg-muted rounded text-xs">pip install obd requests</code>
+                    </p>
+                    <pre className="p-3 bg-muted rounded-md text-xs font-mono overflow-x-auto">
+{`import obd
+import requests
+import time
+import json
+
+# Configuration
+API_URL = "${baseUrl}"
+API_KEY = "your-api-key-here"
+VEHICLE_ID = "your-vehicle-id"
+
+# Connect to OBD adapter
+connection = obd.OBD()
+
+while True:
+    # Read OBD data
+    rpm = connection.query(obd.commands.RPM)
+    speed = connection.query(obd.commands.SPEED)
+    coolant = connection.query(obd.commands.COOLANT_TEMP)
+    fuel = connection.query(obd.commands.FUEL_LEVEL)
+    
+    # Send diagnostic data
+    obd_data = {
+        "vehicleId": VEHICLE_ID,
+        "rpm": rpm.value.magnitude if rpm.value else 0,
+        "speed": speed.value.magnitude if speed.value else 0,
+        "coolantTemp": coolant.value.magnitude if coolant.value else 0,
+        "fuelLevel": fuel.value.magnitude if fuel.value else 0
+    }
+    
+    requests.post(
+        f"{API_URL}/api/obd/data",
+        json=obd_data,
+        headers={"X-API-Key": API_KEY}
+    )
+    
+    time.sleep(30)  # Update every 30 seconds`}
+                    </pre>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Setup Steps</h3>
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                      <li>Install Raspberry Pi OS on your microSD card</li>
+                      <li>Connect the ELM327 adapter to the Raspberry Pi (USB or via Bluetooth)</li>
+                      <li>Install Python and required libraries: <code className="px-1 py-0.5 bg-muted rounded text-xs">sudo apt install python3-pip && pip3 install obd requests</code></li>
+                      <li>Generate an API key below and add it to your Python script</li>
+                      <li>Configure your vehicle ID in the script</li>
+                      <li>Set up the script to run on boot: <code className="px-1 py-0.5 bg-muted rounded text-xs">sudo systemctl enable your-script.service</code></li>
+                      <li>Connect power to the Raspberry Pi from your vehicle's 12V outlet</li>
+                    </ol>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Tips & Best Practices</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li>Use a power converter with voltage protection to prevent damage</li>
+                      <li>Add GPS module or use phone's GPS via Bluetooth for location tracking</li>
+                      <li>Configure WiFi or cellular hotspot for internet connectivity</li>
+                      <li>Set up automatic startup script to begin tracking when vehicle starts</li>
+                      <li>Consider using a battery backup for graceful shutdowns</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* API Key Management */}
               <Card>
                 <CardHeader>
