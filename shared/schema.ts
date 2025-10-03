@@ -68,6 +68,15 @@ export const obdData = pgTable("obd_data", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  name: text("name").notNull(),
+  isActive: integer("is_active").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+});
+
 // Insert schemas
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
@@ -95,6 +104,12 @@ export const insertObdDataSchema = createInsertSchema(obdData).omit({
   timestamp: true,
 });
 
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+
 // Types
 export type Vehicle = typeof vehicles.$inferSelect;
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
@@ -110,6 +125,9 @@ export type InsertVehicleLocation = z.infer<typeof insertVehicleLocationSchema>;
 
 export type ObdData = typeof obdData.$inferSelect;
 export type InsertObdData = z.infer<typeof insertObdDataSchema>;
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 
 // Additional types for WebSocket messages
 export type LocationUpdate = {

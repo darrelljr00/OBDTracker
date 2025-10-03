@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link, useLocation } from "wouter";
 import { 
   MapPin, 
   Route, 
@@ -20,6 +21,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isConnected, vehicle, obdData }: SidebarProps) {
+  const [location] = useLocation();
+  
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col slide-in">
       {/* Logo & Header */}
@@ -37,14 +40,16 @@ export function Sidebar({ isConnected, vehicle, obdData }: SidebarProps) {
       
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        <Button 
-          variant="secondary" 
-          className="w-full justify-start space-x-3 bg-primary/10 text-primary font-medium"
-          data-testid="nav-live-tracking"
-        >
-          <MapPin className="w-5 h-5" />
-          <span>Live Tracking</span>
-        </Button>
+        <Link href="/">
+          <Button 
+            variant={location === "/" || location === "/dashboard" ? "secondary" : "ghost"}
+            className={`w-full justify-start space-x-3 ${location === "/" || location === "/dashboard" ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
+            data-testid="nav-live-tracking"
+          >
+            <MapPin className="w-5 h-5" />
+            <span>Live Tracking</span>
+          </Button>
+        </Link>
         <Button 
           variant="ghost" 
           className="w-full justify-start space-x-3 text-muted-foreground hover:text-foreground"
@@ -69,14 +74,16 @@ export function Sidebar({ isConnected, vehicle, obdData }: SidebarProps) {
           <BarChart3 className="w-5 h-5" />
           <span>Analytics</span>
         </Button>
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start space-x-3 text-muted-foreground hover:text-foreground"
-          data-testid="nav-settings"
-        >
-          <Settings className="w-5 h-5" />
-          <span>Settings</span>
-        </Button>
+        <Link href="/settings">
+          <Button 
+            variant={location === "/settings" ? "secondary" : "ghost"}
+            className={`w-full justify-start space-x-3 ${location === "/settings" ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
+            data-testid="nav-settings"
+          >
+            <Settings className="w-5 h-5" />
+            <span>Settings</span>
+          </Button>
+        </Link>
       </nav>
       
       {/* Connection Status */}

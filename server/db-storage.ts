@@ -6,6 +6,7 @@ import {
   trips, 
   vehicleLocations, 
   obdData,
+  apiKeys,
   type Vehicle,
   type InsertVehicle,
   type Driver,
@@ -15,7 +16,9 @@ import {
   type VehicleLocation,
   type InsertVehicleLocation,
   type ObdData,
-  type InsertObdData
+  type InsertObdData,
+  type ApiKey,
+  type InsertApiKey
 } from '@shared/schema';
 import type { IStorage } from './storage';
 
@@ -146,5 +149,34 @@ export class DbStorage implements IStorage {
   async createObdData(insertData: InsertObdData): Promise<ObdData> {
     const result = await db.insert(obdData).values(insertData).returning();
     return result[0];
+  }
+
+  async getApiKeys(): Promise<ApiKey[]> {
+    return await db.select().from(apiKeys);
+  }
+
+  async getApiKey(key: string): Promise<ApiKey | undefined> {
+    const result = await db.select()
+      .from(apiKeys)
+      .where(and(eq(apiKeys.key, key), eq(apiKeys.isActive, 1)))
+      .limit(1);
+    return result[0];
+  }
+
+  async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKey> {
+    const result = await db.insert(apiKeys).values(insertApiKey).returning();
+    return result[0];
+  }
+
+  async deleteApiKey(id: string): Promise<void> {
+    await db.update(apiKeys)
+      .set({ isActive: 0 })
+      .where(eq(apiKeys.id, id));
+  }
+
+  async updateApiKeyLastUsed(key: string): Promise<void> {
+    await db.update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.key, key));
   }
 }

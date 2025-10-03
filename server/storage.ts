@@ -8,7 +8,9 @@ import {
   type VehicleLocation,
   type InsertVehicleLocation,
   type ObdData,
-  type InsertObdData
+  type InsertObdData,
+  type ApiKey,
+  type InsertApiKey
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -40,6 +42,13 @@ export interface IStorage {
   // OBD operations
   getLatestObdData(vehicleId: string): Promise<ObdData | undefined>;
   createObdData(data: InsertObdData): Promise<ObdData>;
+
+  // API Key operations
+  getApiKeys(): Promise<ApiKey[]>;
+  getApiKey(key: string): Promise<ApiKey | undefined>;
+  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
+  deleteApiKey(id: string): Promise<void>;
+  updateApiKeyLastUsed(key: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -298,6 +307,27 @@ export class MemStorage implements IStorage {
     this.obdData.set(data.id, data);
     
     return data;
+  }
+
+  // API Key operations (stub implementations for temporary MemStorage)
+  async getApiKeys(): Promise<ApiKey[]> {
+    return [];
+  }
+
+  async getApiKey(key: string): Promise<ApiKey | undefined> {
+    return undefined;
+  }
+
+  async createApiKey(apiKey: InsertApiKey): Promise<ApiKey> {
+    throw new Error('MemStorage does not support API key creation');
+  }
+
+  async deleteApiKey(id: string): Promise<void> {
+    throw new Error('MemStorage does not support API key deletion');
+  }
+
+  async updateApiKeyLastUsed(key: string): Promise<void> {
+    // No-op for temporary storage
   }
 }
 

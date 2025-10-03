@@ -1,15 +1,17 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storagePromise } from "./storage";
 import { 
   insertVehicleLocationSchema, 
   insertObdDataSchema,
+  insertApiKeySchema,
   type WebSocketMessage,
   type LocationUpdate,
   type ObdUpdate 
 } from "@shared/schema";
 import { z } from "zod";
+import { randomBytes } from "crypto";
 
 // Haversine formula to calculate distance between two GPS coordinates (in miles)
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -55,6 +57,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         client.send(data);
       }
     });
+  };
+
+  // API Key validation middleware for OBD devices
+  const validateApiKey = async (req: Request, res: Response, next: NextFunction) => {
+    const apiKey = req.header('X-API-Key');
+    
+    if (!apiKey) {
+      return res.status(401).json({ error: "API key required" });
+    }
+
+    const key = await storage.getApiKey(apiKey);
+    if (!key) {
+      return res.status(403).json({ error: "Invalid API key" });
+    }
+
+    // Update last used timestamp
+    await storage.updateApiKeyLastUsed(apiKey);
+    
+    next();
+  };
+
+  // Admin authentication middleware for API key management
+  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+    // For now, API key management is only accessible from the same origin
+    // In production, this should be protected by proper user authentication
+    const origin = req.header('Origin') || req.header('Referer');
+    const host = req.header('Host');
+    
+    // Allow requests from same origin (our frontend)
+    if (origin && host && origin.includes(host)) {
+      return next();
+    }
+    
+    // Block external requests
+    return res.status(403).json({ error: "Unauthorized access" });
   };
 
   // API Routes
@@ -141,8 +178,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API Key management routes (admin only)
+  app.get("/api/keys", requireAdmin, async (req, res) => {
+    try {
+      const keys = await storage.getApiKeys();
+      res.json(keys);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch API keys" });
+    }
+  });
+
+  app.post("/api/keys", requireAdmin, async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      
+      // Generate a secure random API key
+      const key = `fts_${randomBytes(32).toString('hex')}`;
+      
+      const apiKey = await storage.createApiKey({
+        key,
+        name,
+        isActive: 1,
+      });
+      
+      res.json(apiKey);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create API key" });
+    }
+  });
+
+  app.delete("/api/keys/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteApiKey(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete API key" });
+    }
+  });
+
   // OBD device endpoint - receive GPS coordinates and vehicle data
-  app.post("/api/obd/location", async (req, res) => {
+  app.post("/api/obd/location", validateApiKey, async (req, res) => {
     try {
       const locationData = insertVehicleLocationSchema.parse(req.body);
       const location = await storage.createVehicleLocation(locationData);
@@ -200,7 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OBD device endpoint - receive diagnostic data
-  app.post("/api/obd/data", async (req, res) => {
+  app.post("/api/obd/data", validateApiKey, async (req, res) => {
     try {
       const obdDataInput = insertObdDataSchema.parse(req.body);
       const obdData = await storage.createObdData(obdDataInput);
