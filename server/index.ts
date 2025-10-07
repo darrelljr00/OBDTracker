@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storagePromise } from "./storage";
+import { OneStepGPSService } from "./onestepgps";
 
 const app = express();
 
@@ -78,4 +80,34 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Set up automatic OneStepGPS sync every 5 seconds
+  const apiKey = process.env.ONESTEPGPS_API_KEY;
+  if (apiKey) {
+    const storage = await storagePromise;
+    const oneStepGPS = new OneStepGPSService(apiKey);
+    
+    // Initial sync
+    oneStepGPS.syncDevicesToVehicles(storage).then(count => {
+      log(`Initial OneStepGPS sync completed: ${count} devices`);
+    }).catch(err => {
+      console.error('Initial OneStepGPS sync failed:', err);
+    });
+
+    // Recurring sync every 5 seconds
+    setInterval(async () => {
+      try {
+        const count = await oneStepGPS.syncDevicesToVehicles(storage);
+        if (count > 0) {
+          log(`OneStepGPS auto-sync: ${count} devices updated`);
+        }
+      } catch (error) {
+        console.error('OneStepGPS auto-sync error:', error);
+      }
+    }, 5000); // 5 seconds interval
+    
+    log('OneStepGPS auto-sync enabled (5s interval)');
+  } else {
+    log('OneStepGPS auto-sync disabled (no API key configured)');
+  }
 })();
