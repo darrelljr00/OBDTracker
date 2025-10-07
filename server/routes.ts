@@ -12,6 +12,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { randomBytes } from "crypto";
+import { OneStepGPSService } from "./onestepgps";
 
 // Haversine formula to calculate distance between two GPS coordinates (in miles)
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -240,6 +241,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(setting);
     } catch (error) {
       res.status(500).json({ error: "Failed to save setting" });
+    }
+  });
+
+  // OneStepGPS integration routes
+  app.post("/api/onestepgps/sync", requireAdmin, async (req, res) => {
+    try {
+      const apiKey = process.env.ONESTEPGPS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "OneStepGPS API key not configured" });
+      }
+
+      const oneStepGPS = new OneStepGPSService(apiKey);
+      const syncedCount = await oneStepGPS.syncDevicesToVehicles(storage);
+      
+      res.json({ 
+        success: true, 
+        syncedCount,
+        message: `Successfully synced ${syncedCount} devices from OneStepGPS`
+      });
+    } catch (error) {
+      console.error('OneStepGPS sync error:', error);
+      res.status(500).json({ error: "Failed to sync OneStepGPS devices" });
+    }
+  });
+
+  app.get("/api/onestepgps/devices", requireAdmin, async (req, res) => {
+    try {
+      const apiKey = process.env.ONESTEPGPS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "OneStepGPS API key not configured" });
+      }
+
+      const oneStepGPS = new OneStepGPSService(apiKey);
+      const devices = await oneStepGPS.getDevices();
+      
+      res.json({ devices, count: devices.length });
+    } catch (error) {
+      console.error('OneStepGPS devices fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch OneStepGPS devices" });
     }
   });
 

@@ -365,6 +365,81 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
+              {/* OneStepGPS Integration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>OneStepGPS Integration</CardTitle>
+                  <CardDescription>
+                    Sync your OneStepGPS devices and view real-time tracking data
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="font-medium">API Key Configured</p>
+                      <p className="text-sm text-muted-foreground">Your OneStepGPS account is connected</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const response = await apiRequest('POST', '/api/onestepgps/sync');
+                            toast({
+                              title: "Sync Complete",
+                              description: `Synced ${response.syncedCount} devices from OneStepGPS`,
+                            });
+                            queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                          } catch (error) {
+                            toast({
+                              title: "Sync Failed",
+                              description: "Failed to sync OneStepGPS devices",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        data-testid="button-sync-onestepgps"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Sync Devices
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">How It Works</h3>
+                    <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                      <li>Click "Sync Devices" to import your OneStepGPS trackers as vehicles</li>
+                      <li>Each device becomes a vehicle in your fleet with live GPS tracking</li>
+                      <li>Location data updates automatically from OneStepGPS</li>
+                      <li>View all your devices on the dashboard map</li>
+                      <li>Track trip history and routes for each device</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Device Information</h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      OneStepGPS devices provide:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li>Real-time GPS location (latitude, longitude)</li>
+                      <li>Speed and heading information</li>
+                      <li>Device active/inactive status</li>
+                      <li>Vehicle identification (VIN if available)</li>
+                      <li>Last update timestamp</li>
+                    </ul>
+                  </div>
+
+                  <div className="p-4 border-l-4 border-blue-500 bg-blue-500/10 rounded">
+                    <p className="text-sm font-medium mb-1">📍 Automatic Updates</p>
+                    <p className="text-sm text-muted-foreground">
+                      After syncing, your OneStepGPS devices will appear in the dashboard. 
+                      Sync again anytime to update vehicle information and import new devices.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Raspberry Pi Integration */}
               <Card>
                 <CardHeader>
