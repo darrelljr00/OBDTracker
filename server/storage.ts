@@ -22,6 +22,7 @@ export interface IStorage {
   getVehicles(): Promise<Vehicle[]>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
+  deleteVehicle(id: string): Promise<void>;
 
   // Driver operations
   getDriver(id: string): Promise<Driver | undefined>;
@@ -174,6 +175,25 @@ export class MemStorage implements IStorage {
     const updated = { ...vehicle, ...updates };
     this.vehicles.set(id, updated);
     return updated;
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    this.vehicles.delete(id);
+    // Clean up related data
+    const tripKeys = Array.from(this.trips.entries())
+      .filter(([_, trip]) => trip.vehicleId === id)
+      .map(([key]) => key);
+    tripKeys.forEach(key => this.trips.delete(key));
+    
+    const locationKeys = Array.from(this.vehicleLocations.entries())
+      .filter(([_, location]) => location.vehicleId === id)
+      .map(([key]) => key);
+    locationKeys.forEach(key => this.vehicleLocations.delete(key));
+    
+    const obdKeys = Array.from(this.obdData.entries())
+      .filter(([_, obd]) => obd.vehicleId === id)
+      .map(([key]) => key);
+    obdKeys.forEach(key => this.obdData.delete(key));
   }
 
   // Driver operations

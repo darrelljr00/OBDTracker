@@ -48,6 +48,15 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async deleteVehicle(id: string): Promise<void> {
+    // Delete related records first
+    await db.delete(obdData).where(eq(obdData.vehicleId, id));
+    await db.delete(vehicleLocations).where(eq(vehicleLocations.vehicleId, id));
+    await db.delete(trips).where(eq(trips.vehicleId, id));
+    // Finally delete the vehicle
+    await db.delete(vehicles).where(eq(vehicles.id, id));
+  }
+
   async getDriver(id: string): Promise<Driver | undefined> {
     const result = await db.select().from(drivers).where(eq(drivers.id, id)).limit(1);
     return result[0];

@@ -143,6 +143,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete vehicle
+  app.delete("/api/vehicles/:id", async (req, res) => {
+    try {
+      const vehicle = await storage.getVehicle(req.params.id);
+      if (!vehicle) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+      await storage.deleteVehicle(req.params.id);
+      res.json({ message: "Vehicle deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete vehicle" });
+    }
+  });
+
   // Get vehicle's current location
   app.get("/api/vehicles/:id/location", async (req, res) => {
     try {
