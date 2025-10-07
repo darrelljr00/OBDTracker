@@ -14,9 +14,7 @@ interface OneStepGPSDevice {
   };
 }
 
-interface OneStepGPSResponse {
-  result_list: OneStepGPSDevice[];
-}
+type OneStepGPSResponse = OneStepGPSDevice[];
 
 export class OneStepGPSService {
   private apiKey: string;
@@ -42,8 +40,9 @@ export class OneStepGPSService {
       }
 
       const data: OneStepGPSResponse = await response.json();
-      console.log('OneStepGPS devices fetched successfully:', data.result_list?.length || 0);
-      return data.result_list || [];
+      console.log('OneStepGPS API response:', JSON.stringify(data, null, 2));
+      console.log('OneStepGPS devices fetched successfully:', data?.length || 0);
+      return data || [];
     } catch (error) {
       console.error('Failed to fetch OneStepGPS devices:', error);
       return [];
@@ -56,16 +55,19 @@ export class OneStepGPSService {
 
     for (const device of devices) {
       try {
-        // Check if vehicle exists by device_id as plate
+        // Use display_name as unique identifier since device_id isn't provided
+        const deviceId = device.device_id || device.display_name;
+        
+        // Check if vehicle exists by device_id or display_name as plate
         const existingVehicles = await storage.getVehicles();
-        let vehicle = existingVehicles.find(v => v.plate === device.device_id);
+        let vehicle = existingVehicles.find(v => v.plate === deviceId || v.name === device.display_name);
 
         if (!vehicle) {
           // Create new vehicle from OneStepGPS device
           vehicle = await storage.createVehicle({
-            name: device.display_name || `Vehicle ${device.device_id}`,
-            plate: device.device_id,
-            vin: device.params?.vin || `ONESTEP-${device.device_id}`,
+            name: device.display_name || `Vehicle ${deviceId}`,
+            plate: deviceId,
+            vin: device.params?.vin || `ONESTEP-${deviceId}`,
             make: 'OneStepGPS',
             model: 'Tracked Device',
             year: new Date().getFullYear(),
