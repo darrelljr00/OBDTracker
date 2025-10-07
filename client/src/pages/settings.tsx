@@ -23,6 +23,7 @@ export default function Settings() {
   const [customBaseUrl, setCustomBaseUrl] = useState("");
   const [locationExample, setLocationExample] = useState("");
   const [obdExample, setObdExample] = useState("");
+  const [authExample, setAuthExample] = useState("");
   const [configSteps, setConfigSteps] = useState("");
 
   const { data: apiKeys = [], isLoading } = useQuery<ApiKey[]>({
@@ -43,11 +44,13 @@ export default function Settings() {
       setCustomBaseUrl(configData.value.customBaseUrl || "");
       setLocationExample(configData.value.locationExample || getDefaultLocationExample());
       setObdExample(configData.value.obdExample || getDefaultObdExample());
+      setAuthExample(configData.value.authExample || getDefaultAuthExample());
       setConfigSteps(configData.value.configSteps || getDefaultConfigSteps());
     } else {
       setCustomBaseUrl("");
       setLocationExample(getDefaultLocationExample());
       setObdExample(getDefaultObdExample());
+      setAuthExample(getDefaultAuthExample());
       setConfigSteps(getDefaultConfigSteps());
     }
   }, [configData]);
@@ -72,6 +75,8 @@ export default function Settings() {
   "throttlePosition": 30,
   "batteryVoltage": 13.8
 }`;
+
+  const getDefaultAuthExample = () => `X-API-Key: your-api-key-here`;
 
   const getDefaultConfigSteps = () => `1. Generate an API key below
 2. Log into your OBD device's admin portal
@@ -130,6 +135,7 @@ export default function Settings() {
           customBaseUrl,
           locationExample,
           obdExample,
+          authExample,
           configSteps,
         },
       });
@@ -218,6 +224,7 @@ export default function Settings() {
                                 setCustomBaseUrl(configData.value.customBaseUrl || "");
                                 setLocationExample(configData.value.locationExample);
                                 setObdExample(configData.value.obdExample);
+                                setAuthExample(configData.value.authExample);
                                 setConfigSteps(configData.value.configSteps);
                               }
                             }}
@@ -323,9 +330,18 @@ export default function Settings() {
                     <p className="text-sm text-muted-foreground mb-2">
                       All OBD device requests must include an API key in the header:
                     </p>
-                    <pre className="p-3 bg-muted rounded-md text-xs font-mono">
-                      X-API-Key: your-api-key-here
-                    </pre>
+                    {isEditing ? (
+                      <Input
+                        value={authExample}
+                        onChange={(e) => setAuthExample(e.target.value)}
+                        className="font-mono text-xs"
+                        data-testid="input-auth-example"
+                      />
+                    ) : (
+                      <pre className="p-3 bg-muted rounded-md text-xs font-mono">
+                        {authExample}
+                      </pre>
+                    )}
                   </div>
 
                   <div>
