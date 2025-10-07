@@ -7,6 +7,7 @@ import {
   vehicleLocations, 
   obdData,
   apiKeys,
+  configSettings,
   type Vehicle,
   type InsertVehicle,
   type Driver,
@@ -18,7 +19,9 @@ import {
   type ObdData,
   type InsertObdData,
   type ApiKey,
-  type InsertApiKey
+  type InsertApiKey,
+  type ConfigSetting,
+  type InsertConfigSetting
 } from '@shared/schema';
 import type { IStorage } from './storage';
 
@@ -178,5 +181,27 @@ export class DbStorage implements IStorage {
     await db.update(apiKeys)
       .set({ lastUsedAt: new Date() })
       .where(eq(apiKeys.key, key));
+  }
+
+  async getConfigSetting(key: string): Promise<ConfigSetting | undefined> {
+    const result = await db.select()
+      .from(configSettings)
+      .where(eq(configSettings.key, key))
+      .limit(1);
+    return result[0];
+  }
+
+  async upsertConfigSetting(setting: InsertConfigSetting): Promise<ConfigSetting> {
+    const existing = await this.getConfigSetting(setting.key);
+    if (existing) {
+      const result = await db.update(configSettings)
+        .set({ value: setting.value, updatedAt: new Date() })
+        .where(eq(configSettings.key, setting.key))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(configSettings).values(setting).returning();
+      return result[0];
+    }
   }
 }

@@ -10,7 +10,9 @@ import {
   type ObdData,
   type InsertObdData,
   type ApiKey,
-  type InsertApiKey
+  type InsertApiKey,
+  type ConfigSetting,
+  type InsertConfigSetting
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -49,6 +51,10 @@ export interface IStorage {
   createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
   deleteApiKey(id: string): Promise<void>;
   updateApiKeyLastUsed(key: string): Promise<void>;
+
+  // Config Setting operations
+  getConfigSetting(key: string): Promise<ConfigSetting | undefined>;
+  upsertConfigSetting(setting: InsertConfigSetting): Promise<ConfigSetting>;
 }
 
 export class MemStorage implements IStorage {
@@ -328,6 +334,15 @@ export class MemStorage implements IStorage {
 
   async updateApiKeyLastUsed(key: string): Promise<void> {
     // No-op for temporary storage
+  }
+
+  // Config Setting operations (stub implementations for temporary MemStorage)
+  async getConfigSetting(key: string): Promise<ConfigSetting | undefined> {
+    return undefined;
+  }
+
+  async upsertConfigSetting(setting: InsertConfigSetting): Promise<ConfigSetting> {
+    throw new Error('MemStorage does not support config settings');
   }
 }
 

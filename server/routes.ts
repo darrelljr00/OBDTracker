@@ -219,6 +219,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Config settings routes (admin only)
+  app.get("/api/config/:key", requireAdmin, async (req, res) => {
+    try {
+      const setting = await storage.getConfigSetting(req.params.key);
+      res.json(setting || null);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch setting" });
+    }
+  });
+
+  app.post("/api/config", requireAdmin, async (req, res) => {
+    try {
+      const { key, value } = req.body;
+      if (!key) {
+        return res.status(400).json({ error: "Key is required" });
+      }
+      
+      const setting = await storage.upsertConfigSetting({ key, value });
+      res.json(setting);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to save setting" });
+    }
+  });
+
   // OBD device endpoint - receive GPS coordinates and vehicle data
   app.post("/api/obd/location", validateApiKey, async (req, res) => {
     try {

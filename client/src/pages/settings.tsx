@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Plus, Trash2, Key, Check } from "lucide-react";
+import { Copy, Plus, Trash2, Key, Check, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -18,10 +19,64 @@ export default function Settings() {
   const { isConnected } = useWebSocket();
   const [newKeyName, setNewKeyName] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [locationExample, setLocationExample] = useState("");
+  const [obdExample, setObdExample] = useState("");
+  const [configSteps, setConfigSteps] = useState("");
 
   const { data: apiKeys = [], isLoading } = useQuery<ApiKey[]>({
     queryKey: ['/api/keys'],
   });
+
+  const { data: configData } = useQuery({
+    queryKey: ['/api/config', 'obd-documentation'],
+    queryFn: async () => {
+      const response = await fetch('/api/config/obd-documentation');
+      if (!response.ok) return null;
+      return await response.json();
+    },
+  });
+
+  useEffect(() => {
+    if (configData?.value) {
+      setLocationExample(configData.value.locationExample || getDefaultLocationExample());
+      setObdExample(configData.value.obdExample || getDefaultObdExample());
+      setConfigSteps(configData.value.configSteps || getDefaultConfigSteps());
+    } else {
+      setLocationExample(getDefaultLocationExample());
+      setObdExample(getDefaultObdExample());
+      setConfigSteps(getDefaultConfigSteps());
+    }
+  }, [configData]);
+
+  const getDefaultLocationExample = () => `{
+  "vehicleId": "your-vehicle-id",
+  "latitude": 40.7485,
+  "longitude": -73.9883,
+  "speed": 65,
+  "heading": 90,
+  "altitude": 100,
+  "accuracy": 5
+}`;
+
+  const getDefaultObdExample = () => `{
+  "vehicleId": "your-vehicle-id",
+  "rpm": 2500,
+  "speed": 65,
+  "coolantTemp": 195,
+  "fuelLevel": 75,
+  "engineLoad": 45,
+  "throttlePosition": 30,
+  "batteryVoltage": 13.8
+}`;
+
+  const getDefaultConfigSteps = () => `1. Generate an API key below
+2. Log into your OBD device's admin portal
+3. Find the "Webhook" or "API Integration" settings
+4. Enter the base URL and endpoints above
+5. Add the API key to the request headers
+6. Configure the vehicle ID for each device
+7. Set the data transmission interval (recommended: 30-60 seconds)`;
 
   const createKeyMutation = useMutation({
     mutationFn: async (name: string) => {
@@ -64,6 +119,34 @@ export default function Settings() {
     },
   });
 
+  const saveConfigMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/config', {
+        key: 'obd-documentation',
+        value: {
+          locationExample,
+          obdExample,
+          configSteps,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/config', 'obd-documentation'] });
+      setIsEditing(false);
+      toast({
+        title: "Configuration Saved",
+        description: "Your documentation has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save configuration",
+        variant: "destructive",
+      });
+    },
+  });
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(text);
@@ -101,10 +184,56 @@ export default function Settings() {
               {/* API Documentation */}
               <Card>
                 <CardHeader>
-                  <CardTitle>OBD Device Configuration</CardTitle>
-                  <CardDescription>
-                    Configure your cellular/WiFi OBD devices to send data to this system
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>OBD Device Configuration</CardTitle>
+                      <CardDescription>
+                        Configure your cellular/WiFi OBD devices to send data to this system
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      {!isEditing ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsEditing(true)}
+                          data-testid="button-edit-config"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setIsEditing(false);
+                              // Reset to saved values
+                              if (configData?.value) {
+                                setLocationExample(configData.value.locationExample);
+                                setObdExample(configData.value.obdExample);
+                                setConfigSteps(configData.value.configSteps);
+                              }
+                            }}
+                            data-testid="button-cancel-edit"
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => saveConfigMutation.mutate()}
+                            disabled={saveConfigMutation.isPending}
+                            data-testid="button-save-config"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Save Changes
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
@@ -133,17 +262,18 @@ export default function Settings() {
                           <code className="text-sm font-mono">/api/obd/location</code>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">Send GPS location data</p>
-                        <pre className="p-3 bg-muted rounded-md text-xs font-mono overflow-x-auto">
-{`{
-  "vehicleId": "your-vehicle-id",
-  "latitude": 40.7485,
-  "longitude": -73.9883,
-  "speed": 65,
-  "heading": 90,
-  "altitude": 100,
-  "accuracy": 5
-}`}
-                        </pre>
+                        {isEditing ? (
+                          <Textarea
+                            value={locationExample}
+                            onChange={(e) => setLocationExample(e.target.value)}
+                            className="font-mono text-xs min-h-[150px]"
+                            data-testid="input-location-example"
+                          />
+                        ) : (
+                          <pre className="p-3 bg-muted rounded-md text-xs font-mono overflow-x-auto">
+{locationExample}
+                          </pre>
+                        )}
                       </div>
 
                       <div>
@@ -152,18 +282,18 @@ export default function Settings() {
                           <code className="text-sm font-mono">/api/obd/data</code>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">Send diagnostic data</p>
-                        <pre className="p-3 bg-muted rounded-md text-xs font-mono overflow-x-auto">
-{`{
-  "vehicleId": "your-vehicle-id",
-  "rpm": 2500,
-  "speed": 65,
-  "coolantTemp": 195,
-  "fuelLevel": 75,
-  "engineLoad": 45,
-  "throttlePosition": 30,
-  "batteryVoltage": 13.8
-}`}
-                        </pre>
+                        {isEditing ? (
+                          <Textarea
+                            value={obdExample}
+                            onChange={(e) => setObdExample(e.target.value)}
+                            className="font-mono text-xs min-h-[150px]"
+                            data-testid="input-obd-example"
+                          />
+                        ) : (
+                          <pre className="p-3 bg-muted rounded-md text-xs font-mono overflow-x-auto">
+{obdExample}
+                          </pre>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -180,15 +310,21 @@ export default function Settings() {
 
                   <div>
                     <h3 className="text-lg font-semibold mb-3">Configuration Steps</h3>
-                    <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                      <li>Generate an API key below</li>
-                      <li>Log into your OBD device's admin portal</li>
-                      <li>Find the "Webhook" or "API Integration" settings</li>
-                      <li>Enter the base URL and endpoints above</li>
-                      <li>Add the API key to the request headers</li>
-                      <li>Configure the vehicle ID for each device</li>
-                      <li>Set the data transmission interval (recommended: 30-60 seconds)</li>
-                    </ol>
+                    {isEditing ? (
+                      <Textarea
+                        value={configSteps}
+                        onChange={(e) => setConfigSteps(e.target.value)}
+                        className="text-sm min-h-[150px]"
+                        placeholder="Enter each step on a new line"
+                        data-testid="input-config-steps"
+                      />
+                    ) : (
+                      <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                        {configSteps.split('\n').map((step, index) => (
+                          <li key={index}>{step.replace(/^\d+\.\s*/, '')}</li>
+                        ))}
+                      </ol>
+                    )}
                   </div>
                 </CardContent>
               </Card>
