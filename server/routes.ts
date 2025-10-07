@@ -107,6 +107,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all vehicle locations
+  app.get("/api/vehicles/locations", async (req, res) => {
+    try {
+      const locations = await storage.getAllVehicleLocations();
+      res.json(locations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch locations" });
+    }
+  });
+
   // Get vehicle by ID
   app.get("/api/vehicles/:id", async (req, res) => {
     try {

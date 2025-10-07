@@ -38,6 +38,7 @@ export interface IStorage {
 
   // Location operations
   getVehicleLocation(vehicleId: string): Promise<VehicleLocation | undefined>;
+  getAllVehicleLocations(): Promise<VehicleLocation[]>;
   getVehicleRoute(tripId: string): Promise<VehicleLocation[]>;
   createVehicleLocation(location: InsertVehicleLocation): Promise<VehicleLocation>;
 
@@ -257,6 +258,13 @@ export class MemStorage implements IStorage {
   // Location operations
   async getVehicleLocation(vehicleId: string): Promise<VehicleLocation | undefined> {
     return this.vehicleLocations.get(`${vehicleId}-current`);
+  }
+
+  async getAllVehicleLocations(): Promise<VehicleLocation[]> {
+    // Get all current locations (those with key pattern vehicleId-current)
+    return Array.from(this.vehicleLocations.entries())
+      .filter(([key]) => key.endsWith('-current'))
+      .map(([_, location]) => location);
   }
 
   async getVehicleRoute(tripId: string): Promise<VehicleLocation[]> {

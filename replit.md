@@ -4,6 +4,19 @@
 
 This is a real-time GPS fleet tracking system built to monitor vehicles, track trips, and display live location data. The application provides a dashboard for viewing vehicle locations on a map, monitoring On-Board Diagnostics (OBD) data, and reviewing trip history. It uses WebSocket technology for real-time updates and features a modern, dark-themed UI for fleet management operations.
 
+## Recent Changes (Oct 2025)
+
+### Multi-Vehicle Map Display
+- **Enhanced Dashboard**: The live tracking map now displays ALL vehicles simultaneously with individual markers
+- **New API Endpoint**: Added GET `/api/vehicles/locations` to fetch all vehicle locations in one request
+- **Map Component Update**: VehicleMap component refactored to support multiple vehicles with:
+  - Individual markers for each vehicle with location data
+  - Different marker colors (selected vehicle: primary blue, others: green)
+  - Popup details on marker click showing vehicle name, plate, speed, and status
+  - Auto-fit bounds to show all vehicles on the map
+  - Center-on-vehicle button works with selected vehicle or all vehicles
+- **OneStepGPS Integration**: Fixed device ID handling to properly sync 6 Dallas-area vehicles with real GPS coordinates
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

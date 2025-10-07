@@ -128,6 +128,14 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getAllVehicleLocations(): Promise<VehicleLocation[]> {
+    // Get the latest location for each vehicle using a subquery
+    const latestLocations = await db.selectDistinctOn([vehicleLocations.vehicleId])
+      .from(vehicleLocations)
+      .orderBy(vehicleLocations.vehicleId, desc(vehicleLocations.timestamp));
+    return latestLocations;
+  }
+
   async getVehicleRoute(tripId: string): Promise<VehicleLocation[]> {
     return await db.select()
       .from(vehicleLocations)

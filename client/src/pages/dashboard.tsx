@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MetricsStrip } from "@/components/dashboard/metrics-strip";
@@ -18,34 +19,44 @@ export default function Dashboard() {
     queryKey: ['/api/vehicles'],
   });
 
-  const selectedVehicleId = vehicles.length > 0 ? vehicles[0].id : null;
-  const selectedVehicle = vehicles[0];
+  // State for selected vehicle (defaults to first vehicle when vehicles load)
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  
+  // Update selected vehicle when vehicles load
+  const effectiveVehicleId = selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : null);
+  const selectedVehicle = vehicles.find(v => v.id === effectiveVehicleId);
 
-  // Get vehicle location
+  // Get locations for ALL vehicles
+  const { data: allLocations = [] } = useQuery<VehicleLocation[]>({
+    queryKey: ['/api/vehicles/locations'],
+    refetchInterval: 5000,
+  });
+
+  // Get vehicle location for selected vehicle (for metrics)
   const { data: location } = useQuery<VehicleLocation>({
-    queryKey: ['/api/vehicles', selectedVehicleId, 'location'],
-    enabled: !!selectedVehicleId,
+    queryKey: ['/api/vehicles', effectiveVehicleId, 'location'],
+    enabled: !!effectiveVehicleId,
     refetchInterval: 5000,
   });
 
   // Get vehicle OBD data
   const { data: obdData } = useQuery<ObdData>({
-    queryKey: ['/api/vehicles', selectedVehicleId, 'obd'],
-    enabled: !!selectedVehicleId,
+    queryKey: ['/api/vehicles', effectiveVehicleId, 'obd'],
+    enabled: !!effectiveVehicleId,
     refetchInterval: 3000,
   });
 
   // Get active trip
   const { data: activeTrip } = useQuery<Trip>({
-    queryKey: ['/api/vehicles', selectedVehicleId, 'active-trip'],
-    enabled: !!selectedVehicleId,
+    queryKey: ['/api/vehicles', effectiveVehicleId, 'active-trip'],
+    enabled: !!effectiveVehicleId,
     refetchInterval: 10000,
   });
 
   // Get trip history
   const { data: trips = [] } = useQuery<Trip[]>({
-    queryKey: ['/api/vehicles', selectedVehicleId, 'trips'],
-    enabled: !!selectedVehicleId,
+    queryKey: ['/api/vehicles', effectiveVehicleId, 'trips'],
+    enabled: !!effectiveVehicleId,
     refetchInterval: 30000,
   });
 
@@ -90,7 +101,11 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4">
               {/* Vehicle Selector */}
               <div className="relative">
-                <Select value={selectedVehicleId || ""} data-testid="select-vehicle">
+                <Select 
+                  value={effectiveVehicleId || ""} 
+                  onValueChange={setSelectedVehicleId}
+                  data-testid="select-vehicle"
+                >
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
@@ -138,8 +153,9 @@ export default function Dashboard() {
               {/* Map Container */}
               <div className="flex-1 bg-card rounded-lg border border-border overflow-hidden">
                 <VehicleMap 
-                  vehicle={selectedVehicle}
-                  location={location}
+                  vehicles={vehicles}
+                  allLocations={allLocations}
+                  selectedVehicle={selectedVehicle}
                   activeTrip={activeTrip}
                   isLive={isConnected}
                 />

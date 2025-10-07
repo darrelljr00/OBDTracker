@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Vehicle, VehicleLocation, Trip } from "@shared/schema";
@@ -6,19 +6,22 @@ import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Layers, Crosshair, Play, SkipBack, SkipForward } from "lucide-react";
 
 interface VehicleMapProps {
-  vehicle?: Vehicle;
-  location?: VehicleLocation;
+  vehicles: Vehicle[];
+  allLocations: VehicleLocation[];
+  selectedVehicle?: Vehicle;
   activeTrip?: Trip;
   isLive: boolean;
 }
 
-export function VehicleMap({ vehicle, location, activeTrip, isLive }: VehicleMapProps) {
+export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip, isLive }: VehicleMapProps) {
   const mapRef = useRef<L.Map | null>(null);
-  const vehicleMarkerRef = useRef<L.Marker | null>(null);
+  const vehicleMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const routeLineRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
   const endMarkerRef = useRef<L.Marker | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [hasInitialFit, setHasInitialFit] = useState(false);
+  const [lastSelectedVehicleId, setLastSelectedVehicleId] = useState<string | undefined>();
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -45,45 +48,80 @@ export function VehicleMap({ vehicle, location, activeTrip, isLive }: VehicleMap
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current || !location) return;
+    if (!mapRef.current) return;
 
     const map = mapRef.current;
-    const { latitude, longitude, speed = 0, heading = 0 } = location;
+    const markers = vehicleMarkersRef.current;
 
-    // Create or update vehicle marker
-    const vehicleIcon = L.divIcon({
-      className: 'bg-transparent',
-      html: `
-        <div class="w-5 h-5 bg-success border-2 border-white rounded-full shadow-lg flex items-center justify-center"
-             style="transform: rotate(${heading}deg)">
-          <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2L3 7v11h14V7l-7-5z"/>
-          </svg>
-        </div>
-      `,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
+    // Remove markers for vehicles that no longer exist
+    const currentVehicleIds = new Set(vehicles.map(v => v.id));
+    markers.forEach((marker, vehicleId) => {
+      if (!currentVehicleIds.has(vehicleId)) {
+        map.removeLayer(marker);
+        markers.delete(vehicleId);
+      }
     });
 
-    if (vehicleMarkerRef.current) {
-      vehicleMarkerRef.current.setLatLng([latitude, longitude]);
-      vehicleMarkerRef.current.setIcon(vehicleIcon);
-    } else {
-      const marker = L.marker([latitude, longitude], { icon: vehicleIcon }).addTo(map);
-      marker.bindPopup(`
-        <div class="text-sm">
-          <strong>${vehicle?.name || 'Vehicle'}</strong><br>
-          Speed: ${Math.round(speed ?? 0)} mph<br>
-          Status: ${isLive ? 'Live' : 'Offline'}
-        </div>
-      `);
-      vehicleMarkerRef.current = marker;
+    // Update or create markers for all vehicles
+    allLocations.forEach(location => {
+      const vehicle = vehicles.find(v => v.id === location.vehicleId);
+      if (!vehicle) return;
+
+      const { latitude, longitude, speed = 0, heading = 0 } = location;
+      const isSelected = vehicle.id === selectedVehicle?.id;
+
+      // Different color for selected vehicle
+      const iconColor = isSelected ? 'bg-primary' : 'bg-success';
+      const borderColor = isSelected ? 'border-primary' : 'border-white';
+
+      const vehicleIcon = L.divIcon({
+        className: 'bg-transparent',
+        html: `
+          <div class="w-5 h-5 ${iconColor} border-2 ${borderColor} rounded-full shadow-lg flex items-center justify-center"
+               style="transform: rotate(${heading}deg)">
+            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 2L3 7v11h14V7l-7-5z"/>
+            </svg>
+          </div>
+        `,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+
+      const existingMarker = markers.get(vehicle.id);
+      
+      if (existingMarker) {
+        existingMarker.setLatLng([latitude, longitude]);
+        existingMarker.setIcon(vehicleIcon);
+      } else {
+        const marker = L.marker([latitude, longitude], { icon: vehicleIcon }).addTo(map);
+        marker.bindPopup(`
+          <div class="text-sm">
+            <strong>${vehicle.name}</strong><br>
+            ${vehicle.plate}<br>
+            Speed: ${Math.round(speed ?? 0)} mph<br>
+            Status: ${isLive ? 'Live' : 'Offline'}
+          </div>
+        `);
+        markers.set(vehicle.id, marker);
+      }
+    });
+
+    // Only auto-fit bounds on initial load or when selected vehicle changes
+    const shouldFitBounds = !hasInitialFit || (selectedVehicle && lastSelectedVehicleId !== selectedVehicle.id);
+    
+    if (shouldFitBounds && allLocations.length > 0) {
+      const bounds = L.latLngBounds(
+        allLocations.map(loc => [loc.latitude, loc.longitude])
+      );
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      setHasInitialFit(true);
+      if (selectedVehicle) {
+        setLastSelectedVehicleId(selectedVehicle.id);
+      }
     }
 
-    // Center map on vehicle (optional)
-    map.setView([latitude, longitude], map.getZoom());
-
-  }, [location, vehicle, isLive]);
+  }, [vehicles, allLocations, selectedVehicle, isLive, hasInitialFit, lastSelectedVehicleId]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -163,8 +201,19 @@ export function VehicleMap({ vehicle, location, activeTrip, isLive }: VehicleMap
   };
 
   const handleCenterOnVehicle = () => {
-    if (location && mapRef.current) {
-      mapRef.current.setView([location.latitude, location.longitude], 15);
+    if (!mapRef.current) return;
+    
+    // Find location for selected vehicle
+    const selectedLocation = allLocations.find(loc => loc.vehicleId === selectedVehicle?.id);
+    
+    if (selectedLocation) {
+      mapRef.current.setView([selectedLocation.latitude, selectedLocation.longitude], 15);
+    } else if (allLocations.length > 0) {
+      // If no selected vehicle, center on all vehicles
+      const bounds = L.latLngBounds(
+        allLocations.map(loc => [loc.latitude, loc.longitude])
+      );
+      mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
   };
 
