@@ -356,7 +356,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
             onClick={handleZoomIn}
             data-testid="button-zoom-in"
           >
-            <ZoomIn className="w-4 h-4 text-foreground dark:text-foreground" />
+            <ZoomIn className="w-4 h-4 text-black" />
           </Button>
           <Button 
             variant="ghost" 
@@ -365,7 +365,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
             onClick={handleZoomOut}
             data-testid="button-zoom-out"
           >
-            <ZoomOut className="w-4 h-4 text-foreground dark:text-foreground" />
+            <ZoomOut className="w-4 h-4 text-black" />
           </Button>
         </div>
         
@@ -378,7 +378,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
               className="w-10 h-10 bg-card/95 backdrop-blur-sm border border-border"
               data-testid="button-map-layers"
             >
-              <Layers className="w-4 h-4 text-foreground dark:text-foreground" />
+              <Layers className="w-4 h-4 text-black" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-40 p-2 z-[1100]" side="right">
@@ -410,7 +410,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
           onClick={handleCenterOnVehicle}
           data-testid="button-center-vehicle"
         >
-          <Crosshair className="w-4 h-4 text-foreground dark:text-foreground" />
+          <Crosshair className="w-4 h-4 text-black" />
         </Button>
       </div>
       
@@ -418,18 +418,18 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]">
         <div className="bg-card/95 backdrop-blur-sm rounded-lg border border-border px-6 py-3 flex items-center space-x-4">
           <Button variant="ghost" size="icon" data-testid="button-replay-back">
-            <SkipBack className="w-4 h-4 text-foreground dark:text-foreground" />
+            <SkipBack className="w-4 h-4 text-black" />
           </Button>
           <Button size="icon" className="rounded-full" data-testid="button-replay-play">
             <Play className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" data-testid="button-replay-forward">
-            <SkipForward className="w-4 h-4 text-foreground dark:text-foreground" />
+            <SkipForward className="w-4 h-4 text-black" />
           </Button>
           <div className="w-px h-6 bg-border"></div>
           <div className="flex items-center space-x-2">
-            <span className="text-xs text-foreground dark:text-foreground">Speed:</span>
-            <select className="bg-transparent text-xs text-foreground dark:text-foreground focus:outline-none" data-testid="select-replay-speed" defaultValue="2">
+            <span className="text-xs text-black">Speed:</span>
+            <select className="bg-transparent text-xs text-black focus:outline-none" data-testid="select-replay-speed" defaultValue="2">
               <option value="1">1x</option>
               <option value="2">2x</option>
               <option value="5">5x</option>
