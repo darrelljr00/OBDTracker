@@ -86,7 +86,8 @@ export default function Dashboard() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar 
         isConnected={isConnected} 
-        vehicle={selectedVehicle}
+        vehicles={vehicles}
+        selectedVehicle={selectedVehicle}
         obdData={obdData}
       />
       

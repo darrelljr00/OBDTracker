@@ -16,11 +16,12 @@ import type { Vehicle, ObdData } from "@shared/schema";
 
 interface SidebarProps {
   isConnected: boolean;
-  vehicle?: Vehicle;
+  vehicles: Vehicle[];
+  selectedVehicle?: Vehicle;
   obdData?: ObdData;
 }
 
-export function Sidebar({ isConnected, vehicle, obdData }: SidebarProps) {
+export function Sidebar({ isConnected, vehicles, selectedVehicle, obdData }: SidebarProps) {
   const [location] = useLocation();
   
   return (
@@ -108,32 +109,47 @@ export function Sidebar({ isConnected, vehicle, obdData }: SidebarProps) {
         </Card>
       </div>
       
-      {/* Vehicle Info Card */}
-      {vehicle && (
-        <div className="p-4 border-t border-border">
-          <Card className="p-4">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-lg" data-testid="text-vehicle-name">{vehicle.name}</h3>
-                <p className="text-sm text-muted-foreground" data-testid="text-vehicle-plate">{vehicle.plate}</p>
+      {/* Vehicle List */}
+      <div className="p-4 border-t border-border">
+        <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Fleet Vehicles ({vehicles.length})</h3>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {vehicles.map((vehicle) => (
+            <Card 
+              key={vehicle.id} 
+              className={`p-3 cursor-pointer transition-colors ${
+                selectedVehicle?.id === vehicle.id 
+                  ? 'border-primary bg-primary/5' 
+                  : 'hover:bg-muted/50'
+              }`}
+              data-testid={`vehicle-card-${vehicle.id}`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm truncate" data-testid={`text-vehicle-name-${vehicle.id}`}>
+                    {vehicle.name}
+                  </h4>
+                  <p className="text-xs text-muted-foreground truncate" data-testid={`text-vehicle-plate-${vehicle.id}`}>
+                    {vehicle.plate}
+                  </p>
+                </div>
+                <Badge 
+                  variant="outline" 
+                  className={`ml-2 text-xs ${
+                    vehicle.isActive 
+                      ? 'bg-success/20 text-success border-success/30' 
+                      : 'bg-muted/20 text-muted-foreground border-muted/30'
+                  }`}
+                >
+                  {vehicle.isActive ? 'Active' : 'Inactive'}
+                </Badge>
               </div>
-              <Badge variant="outline" className="bg-success/20 text-success border-success/30">
-                Active
-              </Badge>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">VIN</span>
-                <span className="font-mono text-xs" data-testid="text-vehicle-vin">{vehicle.vin}</span>
+              <div className="mt-2 text-xs text-muted-foreground">
+                {vehicle.make} {vehicle.model} • {vehicle.year}
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Year</span>
-                <span data-testid="text-vehicle-year">{vehicle.year}</span>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          ))}
         </div>
-      )}
+      </div>
       
       {/* OBD Data Card */}
       {obdData && (
