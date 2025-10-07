@@ -3,7 +3,28 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Vehicle, VehicleLocation, Trip } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ZoomIn, ZoomOut, Layers, Crosshair, Play, SkipBack, SkipForward } from "lucide-react";
+
+type MapLayer = 'dark' | 'light' | 'medium';
+
+const MAP_LAYERS = {
+  dark: {
+    name: 'Dark',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '© OpenStreetMap contributors © CARTO'
+  },
+  light: {
+    name: 'Light',
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '© OpenStreetMap contributors © CARTO'
+  },
+  medium: {
+    name: 'Medium',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '© OpenStreetMap contributors © CARTO'
+  }
+} as const;
 
 interface VehicleMapProps {
   vehicles: Vehicle[];
@@ -15,6 +36,7 @@ interface VehicleMapProps {
 
 export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip, isLive }: VehicleMapProps) {
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const vehicleMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const routeLineRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
@@ -22,6 +44,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [hasInitialFit, setHasInitialFit] = useState(false);
   const [lastSelectedVehicleId, setLastSelectedVehicleId] = useState<string | undefined>();
+  const [selectedLayer, setSelectedLayer] = useState<MapLayer>('dark');
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -35,17 +58,40 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
 
     mapRef.current = map;
 
-    // Add dark tile layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap contributors © CARTO',
+    // Add initial tile layer
+    const layer = MAP_LAYERS[selectedLayer];
+    const tileLayer = L.tileLayer(layer.url, {
+      attribution: layer.attribution,
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
+
+    tileLayerRef.current = tileLayer;
 
     return () => {
       map.remove();
     };
   }, []);
+
+  // Handle layer changes
+  useEffect(() => {
+    if (!mapRef.current || !tileLayerRef.current) return;
+
+    const map = mapRef.current;
+    const layer = MAP_LAYERS[selectedLayer];
+
+    // Remove old tile layer
+    map.removeLayer(tileLayerRef.current);
+
+    // Add new tile layer
+    const newTileLayer = L.tileLayer(layer.url, {
+      attribution: layer.attribution,
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+
+    tileLayerRef.current = newTileLayer;
+  }, [selectedLayer]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -245,15 +291,38 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
           </Button>
         </div>
         
-        {/* Map Type Toggle */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="w-10 h-10 bg-card/95 backdrop-blur-sm border border-border"
-          data-testid="button-map-type"
-        >
-          <Layers className="w-4 h-4" />
-        </Button>
+        {/* Map Layer Switcher */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="w-10 h-10 bg-card/95 backdrop-blur-sm border border-border"
+              data-testid="button-map-layers"
+            >
+              <Layers className="w-4 h-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-40 p-2" side="right">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold mb-2 text-muted-foreground">Map Style</p>
+              {Object.entries(MAP_LAYERS).map(([key, layer]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedLayer(key as MapLayer)}
+                  className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                    selectedLayer === key 
+                      ? 'bg-primary text-primary-foreground font-medium' 
+                      : 'hover:bg-muted'
+                  }`}
+                  data-testid={`layer-option-${key}`}
+                >
+                  {layer.name}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
         
         {/* Center on Vehicle */}
         <Button 
