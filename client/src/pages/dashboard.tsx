@@ -90,6 +90,7 @@ export default function Dashboard() {
         vehicles={vehicles}
         selectedVehicle={selectedVehicle}
         obdData={obdData}
+        onVehicleSelect={(vehicleId) => setSelectedVehicleId(vehicleId)}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden">

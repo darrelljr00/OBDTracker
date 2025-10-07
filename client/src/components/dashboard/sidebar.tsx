@@ -19,9 +19,10 @@ interface SidebarProps {
   vehicles: Vehicle[];
   selectedVehicle?: Vehicle;
   obdData?: ObdData;
+  onVehicleSelect?: (vehicleId: string) => void;
 }
 
-export function Sidebar({ isConnected, vehicles, selectedVehicle, obdData }: SidebarProps) {
+export function Sidebar({ isConnected, vehicles, selectedVehicle, obdData, onVehicleSelect }: SidebarProps) {
   const [location] = useLocation();
   
   return (
@@ -121,6 +122,7 @@ export function Sidebar({ isConnected, vehicles, selectedVehicle, obdData }: Sid
                   ? 'border-primary bg-primary/5' 
                   : 'hover:bg-muted/50'
               }`}
+              onClick={() => onVehicleSelect?.(vehicle.id)}
               data-testid={`vehicle-card-${vehicle.id}`}
             >
               <div className="flex items-start justify-between">
