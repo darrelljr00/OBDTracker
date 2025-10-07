@@ -381,7 +381,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
               <Layers className="w-4 h-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-40 p-2" side="right">
+          <PopoverContent className="w-40 p-2 z-[1100]" side="right">
             <div className="space-y-1">
               <p className="text-xs font-semibold mb-2 text-muted-foreground">Map Style</p>
               {Object.entries(MAP_LAYERS).map(([key, layer]) => (
