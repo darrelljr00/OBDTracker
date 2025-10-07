@@ -73,6 +73,14 @@ export class OneStepGPSService {
             year: new Date().getFullYear(),
             isActive: device.active_state === 'active' ? 1 : 0,
           });
+        } else {
+          // Update existing vehicle's active status
+          const newActiveState = device.active_state === 'active' ? 1 : 0;
+          if (vehicle.isActive !== newActiveState) {
+            vehicle = await storage.updateVehicle(vehicle.id, {
+              isActive: newActiveState,
+            }) || vehicle;
+          }
         }
 
         // Update location if we have valid coordinates
