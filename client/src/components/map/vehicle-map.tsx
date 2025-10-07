@@ -120,24 +120,45 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
       const iconColor = isSelected ? 'bg-primary' : 'bg-success';
       const borderColor = isSelected ? 'border-primary' : 'border-white';
 
+      // Show speed badge for active vehicles with movement
+      const currentSpeed = speed ?? 0;
+      const speedDisplay = vehicle.isActive && currentSpeed > 0 
+        ? `<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap shadow-lg" style="animation: speed-pulse 2s ease-in-out infinite;">
+             ${Math.round(currentSpeed)} mph
+           </div>` 
+        : '';
+
       const vehicleIcon = L.divIcon({
         className: 'bg-transparent',
         html: `
-          <div class="w-5 h-5 ${iconColor} border-2 ${borderColor} rounded-full shadow-lg flex items-center justify-center"
-               style="transform: rotate(${heading}deg)">
-            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 2L3 7v11h14V7l-7-5z"/>
-            </svg>
+          <div class="relative">
+            ${speedDisplay}
+            <div class="w-5 h-5 ${iconColor} border-2 ${borderColor} rounded-full shadow-lg flex items-center justify-center"
+                 style="transform: rotate(${heading}deg)">
+              <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2L3 7v11h14V7l-7-5z"/>
+              </svg>
+            </div>
           </div>
         `,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
+        iconSize: [20, 40],
+        iconAnchor: [10, 20],
       });
 
       const existingMarker = markers.get(vehicle.id);
       
       if (existingMarker) {
-        existingMarker.setLatLng([latitude, longitude]);
+        // Smooth animation to new position
+        const currentLatLng = existingMarker.getLatLng();
+        const newLatLng = L.latLng(latitude, longitude);
+        
+        // Only animate if position actually changed and vehicle is active
+        if (vehicle.isActive && !currentLatLng.equals(newLatLng)) {
+          // Use Leaflet's slide animation for smooth movement
+          existingMarker.setLatLng(newLatLng);
+        } else {
+          existingMarker.setLatLng(newLatLng);
+        }
         existingMarker.setIcon(vehicleIcon);
       } else {
         const marker = L.marker([latitude, longitude], { icon: vehicleIcon }).addTo(map);
