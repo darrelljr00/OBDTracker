@@ -28,36 +28,24 @@ export class OneStepGPSService {
 
   async getDevices(): Promise<OneStepGPSDevice[]> {
     try {
-      const url = `${this.baseUrl}/device?latest_point=1`;
-      console.log('Fetching OneStepGPS devices from:', url);
+      const url = `${this.baseUrl}/device-info?lat_lng=1`;
+      console.log('Fetching OneStepGPS devices...');
       
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
+          'X-Api-Key': this.apiKey,
         },
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OneStepGPS API error (Bearer auth):', response.status, errorText.substring(0, 200));
-        
-        console.log('Trying query parameter authentication...');
-        const response2 = await fetch(`${this.baseUrl}/device?latest_point=1&api-key=${this.apiKey}`);
-        
-        if (!response2.ok) {
-          const errorText2 = await response2.text();
-          console.error('OneStepGPS API error (query param):', response2.status, errorText2.substring(0, 200));
-          throw new Error(`OneStepGPS API error: ${response2.statusText}`);
-        }
-        
-        const data2: OneStepGPSResponse = await response2.json();
-        console.log('OneStepGPS devices fetched (query param):', data2.result_list?.length || 0);
-        return data2.result_list || [];
+        console.error('OneStepGPS API error:', response.status, response.statusText);
+        console.error('Error details:', errorText.substring(0, 200));
+        throw new Error(`OneStepGPS API error: ${response.statusText}`);
       }
 
       const data: OneStepGPSResponse = await response.json();
-      console.log('OneStepGPS devices fetched (Bearer):', data.result_list?.length || 0);
+      console.log('OneStepGPS devices fetched successfully:', data.result_list?.length || 0);
       return data.result_list || [];
     } catch (error) {
       console.error('Failed to fetch OneStepGPS devices:', error);
