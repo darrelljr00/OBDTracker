@@ -28,6 +28,7 @@ export default function Settings() {
 
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ['/api/vehicles'],
+    refetchInterval: 5000,
   });
 
   const { data: apiKeys = [], isLoading } = useQuery<ApiKey[]>({

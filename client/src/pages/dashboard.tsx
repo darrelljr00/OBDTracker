@@ -17,6 +17,7 @@ export default function Dashboard() {
   // Get all vehicles
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
     queryKey: ['/api/vehicles'],
+    refetchInterval: 5000,
   });
 
   // State for selected vehicle (defaults to first vehicle when vehicles load)
