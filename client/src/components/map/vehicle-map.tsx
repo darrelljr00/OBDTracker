@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ZoomIn, ZoomOut, Layers, Crosshair, Play, SkipBack, SkipForward } from "lucide-react";
 
 type MapLayer = 'dark' | 'light' | 'medium';
+type VehicleType = 'car' | 'truck' | 'van';
 
 const MAP_LAYERS = {
   dark: {
@@ -26,6 +27,18 @@ const MAP_LAYERS = {
   }
 } as const;
 
+const VEHICLE_ICONS = {
+  car: `<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+  </svg>`,
+  truck: `<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+  </svg>`,
+  van: `<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M17 5H3c-1.1 0-2 .89-2 2v9h2c0 1.65 1.34 3 3 3s3-1.35 3-3h5.5c0 1.65 1.34 3 3 3s3-1.35 3-3H23v-5l-6-6zM6 17.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM17.5 13L17 7h1l3.5 3.5V13h-4zm.5 4.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+  </svg>`
+} as const;
+
 interface VehicleMapProps {
   vehicles: Vehicle[];
   allLocations: VehicleLocation[];
@@ -38,6 +51,8 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const vehicleMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+  const vehicleTrailsRef = useRef<Map<string, L.Polyline>>(new Map());
+  const vehicleHistoryRef = useRef<Map<string, Array<[number, number]>>>(new Map());
   const routeLineRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
   const endMarkerRef = useRef<L.Marker | null>(null);
@@ -108,7 +123,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
       }
     });
 
-    // Update or create markers for all vehicles
+    // Update or create markers for all vehicles with trails
     allLocations.forEach(location => {
       const vehicle = vehicles.find(v => v.id === location.vehicleId);
       if (!vehicle) return;
@@ -116,9 +131,53 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
       const { latitude, longitude, speed = 0, heading = 0 } = location;
       const isSelected = vehicle.id === selectedVehicle?.id;
 
+      // Update vehicle history for trail
+      const history = vehicleHistoryRef.current.get(vehicle.id) || [];
+      const newPos: [number, number] = [latitude, longitude];
+      
+      // Only add if position changed
+      const lastPos = history[history.length - 1];
+      if (!lastPos || lastPos[0] !== newPos[0] || lastPos[1] !== newPos[1]) {
+        history.push(newPos);
+        // Keep only last 20 positions for trail
+        if (history.length > 20) history.shift();
+        vehicleHistoryRef.current.set(vehicle.id, history);
+      }
+
+      // Draw or update trail line
+      const trails = vehicleTrailsRef.current;
+      if (history.length > 1 && vehicle.isActive) {
+        const existingTrail = trails.get(vehicle.id);
+        const trailColor = isSelected ? 'hsl(217, 91%, 60%)' : 'hsl(160, 84%, 39%)';
+        
+        if (existingTrail) {
+          existingTrail.setLatLngs(history);
+          existingTrail.setStyle({ color: trailColor });
+        } else {
+          const trail = L.polyline(history, {
+            color: trailColor,
+            weight: 3,
+            opacity: 0.6,
+            dashArray: '5, 10',
+          }).addTo(map);
+          trails.set(vehicle.id, trail);
+        }
+      } else if (!vehicle.isActive) {
+        // Remove trail if vehicle is inactive
+        const trail = trails.get(vehicle.id);
+        if (trail) {
+          map.removeLayer(trail);
+          trails.delete(vehicle.id);
+        }
+      }
+
       // Different color for selected vehicle
       const iconColor = isSelected ? 'bg-primary' : 'bg-success';
       const borderColor = isSelected ? 'border-primary' : 'border-white';
+
+      // Get vehicle icon based on type
+      const vehicleType = (vehicle.vehicleType || 'car') as VehicleType;
+      const vehicleIconSvg = VEHICLE_ICONS[vehicleType] || VEHICLE_ICONS.car;
 
       // Show speed badge for active vehicles with movement
       const currentSpeed = speed ?? 0;
@@ -135,9 +194,7 @@ export function VehicleMap({ vehicles, allLocations, selectedVehicle, activeTrip
             ${speedDisplay}
             <div class="w-5 h-5 ${iconColor} border-2 ${borderColor} rounded-full shadow-lg flex items-center justify-center"
                  style="transform: rotate(${heading}deg)">
-              <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 2L3 7v11h14V7l-7-5z"/>
-              </svg>
+              ${vehicleIconSvg}
             </div>
           </div>
         `,

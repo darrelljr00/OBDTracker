@@ -13,6 +13,7 @@ export const vehicles = pgTable("vehicles", {
   year: integer("year").notNull(),
   driverId: varchar("driver_id"),
   isActive: integer("is_active").default(1),
+  vehicleType: text("vehicle_type").default("car"), // car, truck, van
   createdAt: timestamp("created_at").defaultNow(),
 });
 

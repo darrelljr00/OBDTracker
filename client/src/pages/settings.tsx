@@ -7,12 +7,67 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Plus, Trash2, Key, Check, Edit, Save, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Copy, Plus, Trash2, Key, Check, Edit, Save, X, Car, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ApiKey, Vehicle } from "@shared/schema";
 import { format } from "date-fns";
+
+function VehicleTypeSelector({ vehicle }: { vehicle: Vehicle }) {
+  const { toast } = useToast();
+  const [vehicleType, setVehicleType] = useState(vehicle.vehicleType || 'car');
+
+  const updateVehicleTypeMutation = useMutation({
+    mutationFn: async (type: string) => {
+      return await apiRequest('PATCH', `/api/vehicles/${vehicle.id}`, { vehicleType: type });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      toast({
+        title: "Vehicle Updated",
+        description: `${vehicle.name} icon changed to ${vehicleType}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update vehicle type",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTypeChange = (type: string) => {
+    setVehicleType(type);
+    updateVehicleTypeMutation.mutate(type);
+  };
+
+  return (
+    <div className="flex items-center justify-between p-4 border rounded-lg" data-testid={`vehicle-type-${vehicle.id}`}>
+      <div className="flex items-center gap-3">
+        {vehicleType === 'car' && <Car className="w-5 h-5 text-muted-foreground" />}
+        {vehicleType === 'truck' && <Truck className="w-5 h-5 text-muted-foreground" />}
+        {vehicleType === 'van' && <Truck className="w-5 h-5 text-muted-foreground" />}
+        <div>
+          <p className="font-medium">{vehicle.name}</p>
+          <p className="text-sm text-muted-foreground">{vehicle.plate}</p>
+        </div>
+      </div>
+      <Select value={vehicleType} onValueChange={handleTypeChange}>
+        <SelectTrigger className="w-32" data-testid={`select-type-${vehicle.id}`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="car">Car</SelectItem>
+          <SelectItem value="truck">Truck</SelectItem>
+          <SelectItem value="van">Van</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 export default function Settings() {
   const { toast } = useToast();
@@ -187,13 +242,34 @@ export default function Settings() {
             </p>
           </div>
 
-          <Tabs defaultValue="integration" className="space-y-6">
+          <Tabs defaultValue="vehicles" className="space-y-6">
             <TabsList>
+              <TabsTrigger value="vehicles" data-testid="tab-vehicles">
+                Vehicle Management
+              </TabsTrigger>
               <TabsTrigger value="integration" data-testid="tab-integration">
                 <Key className="w-4 h-4 mr-2" />
                 Integration
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="vehicles" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Vehicle Icons</CardTitle>
+                  <CardDescription>
+                    Choose the appropriate icon type for each vehicle to display on the map
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {vehicles.map((vehicle) => (
+                      <VehicleTypeSelector key={vehicle.id} vehicle={vehicle} />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="integration" className="space-y-6">
               {/* API Documentation */}

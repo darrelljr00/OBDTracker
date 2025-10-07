@@ -130,6 +130,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update vehicle
+  app.patch("/api/vehicles/:id", async (req, res) => {
+    try {
+      const vehicle = await storage.updateVehicle(req.params.id, req.body);
+      if (!vehicle) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+      res.json(vehicle);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update vehicle" });
+    }
+  });
+
   // Get vehicle's current location
   app.get("/api/vehicles/:id/location", async (req, res) => {
     try {
