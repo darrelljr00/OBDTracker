@@ -20,6 +20,7 @@ export default function Settings() {
   const [newKeyName, setNewKeyName] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [customBaseUrl, setCustomBaseUrl] = useState("");
   const [locationExample, setLocationExample] = useState("");
   const [obdExample, setObdExample] = useState("");
   const [configSteps, setConfigSteps] = useState("");
@@ -39,10 +40,12 @@ export default function Settings() {
 
   useEffect(() => {
     if (configData?.value) {
+      setCustomBaseUrl(configData.value.customBaseUrl || "");
       setLocationExample(configData.value.locationExample || getDefaultLocationExample());
       setObdExample(configData.value.obdExample || getDefaultObdExample());
       setConfigSteps(configData.value.configSteps || getDefaultConfigSteps());
     } else {
+      setCustomBaseUrl("");
       setLocationExample(getDefaultLocationExample());
       setObdExample(getDefaultObdExample());
       setConfigSteps(getDefaultConfigSteps());
@@ -124,6 +127,7 @@ export default function Settings() {
       return await apiRequest('POST', '/api/config', {
         key: 'obd-documentation',
         value: {
+          customBaseUrl,
           locationExample,
           obdExample,
           configSteps,
@@ -157,7 +161,7 @@ export default function Settings() {
     });
   };
 
-  const baseUrl = window.location.origin;
+  const baseUrl = customBaseUrl || window.location.origin;
 
   return (
     <div className="flex h-screen bg-background">
@@ -211,6 +215,7 @@ export default function Settings() {
                               setIsEditing(false);
                               // Reset to saved values
                               if (configData?.value) {
+                                setCustomBaseUrl(configData.value.customBaseUrl || "");
                                 setLocationExample(configData.value.locationExample);
                                 setObdExample(configData.value.obdExample);
                                 setConfigSteps(configData.value.configSteps);
@@ -238,19 +243,34 @@ export default function Settings() {
                 <CardContent className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold mb-3">API Base URL</h3>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 px-4 py-2 bg-muted rounded-md text-sm font-mono">
-                        {baseUrl}
-                      </code>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(baseUrl)}
-                        data-testid="button-copy-base-url"
-                      >
-                        {copiedKey === baseUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={customBaseUrl}
+                          onChange={(e) => setCustomBaseUrl(e.target.value)}
+                          placeholder={window.location.origin}
+                          className="font-mono text-sm"
+                          data-testid="input-base-url"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Leave empty to use the current URL: {window.location.origin}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 px-4 py-2 bg-muted rounded-md text-sm font-mono">
+                          {baseUrl}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => copyToClipboard(baseUrl)}
+                          data-testid="button-copy-base-url"
+                        >
+                          {copiedKey === baseUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <div>
