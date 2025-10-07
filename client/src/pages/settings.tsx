@@ -11,7 +11,7 @@ import { Copy, Plus, Trash2, Key, Check, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { ApiKey } from "@shared/schema";
+import type { ApiKey, Vehicle } from "@shared/schema";
 import { format } from "date-fns";
 
 export default function Settings() {
@@ -25,6 +25,10 @@ export default function Settings() {
   const [obdExample, setObdExample] = useState("");
   const [authExample, setAuthExample] = useState("");
   const [configSteps, setConfigSteps] = useState("");
+
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ['/api/vehicles'],
+  });
 
   const { data: apiKeys = [], isLoading } = useQuery<ApiKey[]>({
     queryKey: ['/api/keys'],
@@ -171,7 +175,7 @@ export default function Settings() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar isConnected={isConnected} />
+      <Sidebar isConnected={isConnected} vehicles={vehicles} />
       
       <main className="flex-1 overflow-auto">
         <div className="p-8">
@@ -383,7 +387,8 @@ export default function Settings() {
                       <Button
                         onClick={async () => {
                           try {
-                            const response = await apiRequest('POST', '/api/onestepgps/sync') as { syncedCount: number; message: string };
+                            const res = await apiRequest('POST', '/api/onestepgps/sync');
+                            const response = await res.json() as { syncedCount: number; message: string };
                             toast({
                               title: "Sync Complete",
                               description: `Synced ${response.syncedCount} devices from OneStepGPS`,
