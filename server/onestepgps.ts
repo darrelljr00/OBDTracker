@@ -28,14 +28,11 @@ export class OneStepGPSService {
 
   async getDevices(): Promise<OneStepGPSDevice[]> {
     try {
-      const url = `${this.baseUrl}/device-info?lat_lng=1`;
-      console.log('Fetching OneStepGPS devices...');
+      const url = `${this.baseUrl}/device-info?lat_lng=1&api-key=${this.apiKey}`;
+      console.log('Fetching OneStepGPS devices from:', url.replace(this.apiKey, '***'));
+      console.log('API key first 5 chars:', this.apiKey.substring(0, 5), 'length:', this.apiKey.length);
       
-      const response = await fetch(url, {
-        headers: {
-          'X-Api-Key': this.apiKey,
-        },
-      });
+      const response = await fetch(url);
 
       if (!response.ok) {
         const errorText = await response.text();
