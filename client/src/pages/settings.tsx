@@ -383,7 +383,7 @@ export default function Settings() {
                       <Button
                         onClick={async () => {
                           try {
-                            const response = await apiRequest('POST', '/api/onestepgps/sync');
+                            const response = await apiRequest('POST', '/api/onestepgps/sync') as { syncedCount: number; message: string };
                             toast({
                               title: "Sync Complete",
                               description: `Synced ${response.syncedCount} devices from OneStepGPS`,
